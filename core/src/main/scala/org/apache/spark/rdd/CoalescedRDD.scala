@@ -91,7 +91,7 @@ private[spark] class CoalescedRDD[T: ClassTag](
     pc.coalesce(maxPartitions, prev).zipWithIndex.map {
       case (pg, i) =>
         val ids = pg.partitions.map(_.index).toArray
-        new CoalescedRDDPartition(i, prev, ids, pg.prefLoc)
+        CoalescedRDDPartition(i, prev, ids, pg.prefLoc)
     }
   }
 
@@ -158,7 +158,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
   extends PartitionCoalescer {
   def compare(o1: PartitionGroup, o2: PartitionGroup): Boolean = o1.numPartitions < o2.numPartitions
   def compare(o1: Option[PartitionGroup], o2: Option[PartitionGroup]): Boolean =
-    if (o1 == None) false else if (o2 == None) true else compare(o1.get, o2.get)
+    if (o1.isEmpty) false else if (o2.isEmpty) true else compare(o1.get, o2.get)
 
   val rnd = new scala.util.Random(7919) // keep this class deterministic
 
@@ -297,7 +297,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
       partitionLocs: PartitionLocations): PartitionGroup = {
     val slack = (balanceSlack * prev.partitions.length).toInt
     // least loaded pref locs
-    val pref = currPrefLocs(p, prev).map(getLeastGroupHash(_)).sortWith(compare)
+    val pref = currPrefLocs(p, prev).map(getLeastGroupHash).sortWith(compare)
     val prefPart = if (pref == Nil) None else pref.head
 
     val r1 = rnd.nextInt(groupArr.size)
